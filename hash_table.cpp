@@ -3,7 +3,7 @@
 * @author - Adrian Aquino, Wen-Chien Yen
 * @file hash_table.cpp - Implementation of the hash table
 *
-* 03/11/25 - Imported Adrian's hash_table.cpp from milestone 2
+* 03/11/25 - Imported Adrian Aquino's hash_table.cpp from milestone 2
 */
 
 #include "hash_table.h"
