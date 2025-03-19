@@ -4,7 +4,7 @@
 * @file doubly_linked_list.cpp - Implementation of the doubly linked list
 *
 * 03/11/25 - Imported Wen-Chien Yen's doubly_linked_list.cpp from milestone 1
-* 03/13/25 - Updated class naming to match header file
+* 03/13/25 - Updated DllNode
 * 03/14/25 - Added JavaDoc style comments from doubly_linked_list.h
 */
 
