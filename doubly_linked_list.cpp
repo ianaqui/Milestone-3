@@ -6,6 +6,7 @@
 * 03/11/25 - Imported Wen-Chien Yen's doubly_linked_list.cpp from milestone 1
 * 03/13/25 - Updated DllNode
 * 03/14/25 - Added JavaDoc style comments from doubly_linked_list.h
+* 03/19/25 - Updated print methods to match output file
 */
 
 #include "doubly_linked_list.h"
@@ -13,6 +14,7 @@
 #include <string>
 
 extern std::ofstream& getOutFile();
+extern void logToFileAndConsole(std::string msg);
 
 DoublyLinkedList::DoublyLinkedList() : head(nullptr), tail(nullptr), size(0) {}
 
@@ -60,18 +62,17 @@ bool DoublyLinkedList::isEmpty() {
 * @return: nothing; updates doubly linked list and size
 */
 void DoublyLinkedList::insertAtHead(int key, DllNode* newNode) {
-    newNode->key = key;
-    newNode->next = nullptr;
-    newNode->prev = nullptr;
-
     if (isEmpty()) {
-        head = tail = newNode;
+        head = newNode;
+        tail = newNode;
+        newNode->prev = nullptr;
+        newNode->next = nullptr;
     } else {
         newNode->next = head;
+        newNode->prev = nullptr;
         head->prev = newNode;
         head = newNode;
     }
-
     size++;
 }
 
@@ -87,18 +88,17 @@ void DoublyLinkedList::insertAtHead(int key, DllNode* newNode) {
 * @return: nothing; updates doubly linked list and size
 */
 void DoublyLinkedList::insertAtTail(int key, DllNode* newNode) {
-    newNode->key = key;
-    newNode->next = nullptr;
-    newNode->prev = nullptr;
-
     if (isEmpty()) {
-        head = tail = newNode;
+        head = newNode;
+        tail = newNode;
+        newNode->prev = nullptr;
+        newNode->next = nullptr;
     } else {
         tail->next = newNode;
         newNode->prev = tail;
+        newNode->next = nullptr;
         tail = newNode;
     }
-
     size++;
 }
 
@@ -119,25 +119,34 @@ void DoublyLinkedList::remove(int key) {
 
     DllNode* current = head;
 
-    while (current != nullptr && current->key != key) {
+    while (current != nullptr) {
+        if (current->key == key) {
+            // If it's the only node
+            if (head == tail) {
+                head = nullptr;
+                tail = nullptr;
+            }
+            // If it's the head
+            else if (current == head) {
+                head = head->next;
+                head->prev = nullptr;
+            }
+            // If it's the tail
+            else if (current == tail) {
+                tail = tail->prev;
+                tail->next = nullptr;
+            }
+            // If it's in the middle
+            else {
+                current->prev->next = current->next;
+                current->next->prev = current->prev;
+            }
+
+            delete current;
+            size--;
+            return;
+        }
         current = current->next;
-    }
-
-    if (current == nullptr) {
-        return;
-    }
-
-    if (current == head) {
-        removeHeaderNode();
-    }
-    else if (current == tail) {
-        removeTailNode();
-    }
-    else {
-        current->prev->next = current->next;
-        current->next->prev = current->prev;
-        delete current;
-        size--;
     }
 }
 
@@ -159,7 +168,8 @@ void DoublyLinkedList::removeHeaderNode() {
     DllNode* temp = head;
 
     if (head == tail) {
-        head = tail = nullptr;
+        head = nullptr;
+        tail = nullptr;
     } else {
         head = head->next;
         head->prev = nullptr;
@@ -187,7 +197,8 @@ void DoublyLinkedList::removeTailNode() {
     DllNode* temp = tail;
 
     if (head == tail) {
-        head = tail = nullptr;
+        head = nullptr;
+        tail = nullptr;
     } else {
         tail = tail->prev;
         tail->next = nullptr;
@@ -214,28 +225,26 @@ void DoublyLinkedList::moveNodeToHead(int key) {
 
     DllNode* current = head->next;
 
-    while (current != nullptr && current->key != key) {
+    while (current != nullptr) {
+        if (current->key == key) {
+            // If it's the tail
+            if (current == tail) {
+                tail = current->prev;
+                tail->next = nullptr;
+            } else {
+                current->prev->next = current->next;
+                current->next->prev = current->prev;
+            }
+
+            // Move to head
+            current->next = head;
+            current->prev = nullptr;
+            head->prev = current;
+            head = current;
+            return;
+        }
         current = current->next;
     }
-
-    if (current == nullptr) {
-        return;
-    }
-
-    // Remove from current position
-    current->prev->next = current->next;
-
-    if (current->next != nullptr) {
-        current->next->prev = current->prev;
-    } else {
-        tail = current->prev;
-    }
-
-    // Move to head
-    current->next = head;
-    current->prev = nullptr;
-    head->prev = current;
-    head = current;
 }
 
 /**
@@ -255,31 +264,28 @@ void DoublyLinkedList::moveNodeToTail(int key) {
 
     DllNode* current = head;
 
-    while (current != nullptr && current->key != key) {
+    while (current != nullptr) {
+        if (current->key == key) {
+            if (current == tail) {
+                return;
+            }
+
+            if (current == head) {
+                head = current->next;
+                head->prev = nullptr;
+            } else {
+                current->prev->next = current->next;
+                current->next->prev = current->prev;
+            }
+
+            current->next = nullptr;
+            current->prev = tail;
+            tail->next = current;
+            tail = current;
+            return;
+        }
         current = current->next;
     }
-
-    if (current == nullptr) {
-        return;
-    }
-
-    // Remove from current position
-    if (current->prev == nullptr) {
-        head = current->next;
-        head->prev = nullptr;
-    } else {
-        current->prev->next = current->next;
-    }
-
-    if (current->next != nullptr) {
-        current->next->prev = current->prev;
-    }
-
-    // Move to tail
-    current->prev = tail;
-    current->next = nullptr;
-    tail->next = current;
-    tail = current;
 }
 
 /**
@@ -300,7 +306,8 @@ void DoublyLinkedList::clear() {
         current = next;
     }
 
-    head = tail = nullptr;
+    head = nullptr;
+    tail = nullptr;
     size = 0;
 }
 
@@ -323,18 +330,12 @@ void DoublyLinkedList::printList() {
         return;
     }
 
-    std::cout << "List contents (head to tail): ";
-    outFile << "List contents (head to tail): ";
-
     DllNode* current = head;
     while (current != nullptr) {
-        std::cout << current->key << " ";
-        outFile << current->key << " ";
+        std::cout << "FIFO Node key: " << current->key << " " << std::endl;
+        outFile << "FIFO Node key: " << current->key << " " << std::endl;
         current = current->next;
     }
-
-    std::cout << std::endl;
-    outFile << std::endl;
 }
 
 /**
@@ -356,16 +357,10 @@ void DoublyLinkedList::reversePrintList() {
         return;
     }
 
-    std::cout << "List contents (tail to head): ";
-    outFile << "List contents (tail to head): ";
-
     DllNode* current = tail;
     while (current != nullptr) {
-        std::cout << current->key << " ";
-        outFile << current->key << " ";
+        std::cout << "FIFO Node key: " << current->key << " " << std::endl;
+        outFile << "FIFO Node key: " << current->key << " " << std::endl;
         current = current->prev;
     }
-
-    std::cout << std::endl;
-    outFile << std::endl;
 }

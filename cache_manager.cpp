@@ -13,6 +13,7 @@
 #include <string>
 
 extern void logToFileAndConsole(std::string msg);
+extern std::ofstream& getOutFile();
 
 /**
 *
@@ -82,26 +83,27 @@ bool CacheManager::isEmpty() {
 * @return   true if success, false otherwise
 */
 bool CacheManager::add(int curKey, DllNode* myNode) {
+    // Check if the key already exists and remove it
     if (contains(curKey)) {
         remove(curKey);
     }
 
+    // Check if we need to remove the oldest item due to cache size limit
     if (doublyLinkedList->getSize() >= maxCacheSize) {
         if (!doublyLinkedList->isEmpty()) {
-            DllNode* oldestNode = doublyLinkedList->tail;
-            if (oldestNode != nullptr) {
-                int oldestKey = oldestNode->key;
-                remove(oldestKey);
-                logToFileAndConsole("Cache is full. Removed oldest entry with key: " + std::to_string(oldestKey));
-            }
+            int oldestKey = doublyLinkedList->tail->key;
+            remove(oldestKey);
         }
     }
 
+    // Create hash node and add to the hash table
     HashNode* newHashNode = new HashNode(curKey, myNode);
-    hashTable->add(curKey, newHashNode);
+    bool addedToHash = hashTable->add(curKey, newHashNode);
+
+    // Add to doubly linked list
     doublyLinkedList->insertAtHead(curKey, myNode);
 
-    return true;
+    return addedToHash;
 }
 
 /**
@@ -115,12 +117,15 @@ bool CacheManager::add(int curKey, DllNode* myNode) {
 * @return   true if success, false otherwise
 */
 bool CacheManager::remove(int curKey) {
-    HashNode* hashNode = hashTable->getItem(curKey);
-    if (hashNode == nullptr) {
+    // Check if the key exists
+    if (!hashTable->contains(curKey)) {
         return false;
     }
 
+    // Remove from the doubly linked list first
     doublyLinkedList->remove(curKey);
+
+    // Then remove from the hash table
     return hashTable->remove(curKey);
 }
 
@@ -155,7 +160,9 @@ DllNode* CacheManager::getItem(int curKey) {
         return nullptr;
     }
 
+    // Move the node to the head to indicate recent usage
     doublyLinkedList->moveNodeToHead(curKey);
+
     return hashNode->getFifoNode();
 }
 
@@ -204,17 +211,31 @@ bool CacheManager::contains(int curKey) {
 * @return   pointer to the hash table array
 */
 void CacheManager::printCache() {
-    logToFileAndConsole("\n\nPrinting out the cache contents\n");
+    std::ofstream& outFile = getOutFile();
 
-    logToFileAndConsole("Here are the FIFO List contents: ");
-    DllNode* current = doublyLinkedList->head;
-    while (current != nullptr) {
-        logToFileAndConsole("FIFO Node key: " + std::to_string(current->key) + " ");
-        current = current->next;
+    std::cout << "\n\nPrinting out the cache contents" << std::endl;
+    outFile << "\n\nPrinting out the cache contents" << std::endl;
+
+    std::cout << "\nHere are the FIFO List contents: " << std::endl;
+    outFile << "\nHere are the FIFO List contents: " << std::endl;
+
+    if (doublyLinkedList->isEmpty()) {
+        std::cout << "Empty list" << std::endl;
+        outFile << "Empty list" << std::endl;
+    } else {
+        DllNode* current = doublyLinkedList->head;
+        while (current != nullptr) {
+            std::cout << "FIFO Node key: " << current->key << " " << std::endl;
+            outFile << "FIFO Node key: " << current->key << " " << std::endl;
+            current = current->next;
+        }
     }
-    logToFileAndConsole("End of FIFO List\n");
+
+    std::cout << "End of FIFO List" << std::endl;
+    outFile << "End of FIFO List" << std::endl;
 
     hashTable->printTable();
 
-    logToFileAndConsole("\nEnd of cache contents\n");
+    std::cout << "\nEnd of cache contents" << std::endl;
+    outFile << "\nEnd of cache contents" << std::endl;
 }

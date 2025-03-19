@@ -4,13 +4,16 @@
 * @file hash_table.cpp - Implementation of the hash table
 *
 * 03/11/25 - Imported Adrian Aquino's hash_table.cpp from milestone 2
+* 03/19/25 - Fixed implementation of add method
+*
 */
 
-#include "hash_table.h"
 #include <iostream>
-#include <string>
+#include <fstream>
+#include "hash_table.h"
 
 extern std::ofstream& getOutFile();
+
 
 /**
 *
@@ -22,9 +25,11 @@ extern std::ofstream& getOutFile();
 *
 * @return   pointer to the hash table array
 */
+
 HashNode** HashTable::getTable() {
     return table;
 }
+
 
 /**
 *
@@ -40,6 +45,7 @@ int HashTable::getSize() {
     return numberOfBuckets;
 }
 
+
 /**
 *
 * calculateHashCode
@@ -50,10 +56,11 @@ int HashTable::getSize() {
 *
 * @return   hashcode for currentKey
 */
+
 int HashTable::calculateHashCode(int currentKey) {
-    int result = currentKey % numberOfBuckets;
-    return result;
+    return currentKey % numberOfBuckets;
 }
+
 
 /**
 *
@@ -65,13 +72,11 @@ int HashTable::calculateHashCode(int currentKey) {
 *
 * @return   true if the table has zero entries, false otherwise
 */
+
 bool HashTable::isEmpty() {
-    if (numberOfItems == 0) {
-        return true;
-    } else {
-        return false;
-    }
+    return numberOfItems == 0;
 }
+
 
 /**
 *
@@ -83,9 +88,11 @@ bool HashTable::isEmpty() {
 *
 * @return   number of items in the table
 */
+
 int HashTable::getNumberOfItems() {
     return numberOfItems;
 }
+
 
 /**
 *
@@ -98,44 +105,49 @@ int HashTable::getNumberOfItems() {
 *
 * @return   true if success, false otherwise
 */
+
 bool HashTable::add(int curKey, HashNode* myNode) {
     int hashCode = calculateHashCode(curKey);
     myNode->hashCode = hashCode;
+    myNode->key = curKey;
 
     if (table[hashCode] == nullptr) {
         table[hashCode] = myNode;
-        numberOfItems++;
-        return true;
-    }
+        myNode->next = nullptr;
+        myNode->prev = nullptr;
+    } else {
+        // Check if key already exists
+        HashNode* current = table[hashCode];
+        while (current != nullptr) {
+            if (current->key == curKey) {
+                // Replace existing node
+                if (current->prev == nullptr) {
+                    table[hashCode] = myNode;
+                } else {
+                    current->prev->next = myNode;
+                }
 
-    HashNode* current = table[hashCode];
+                if (current->next != nullptr) {
+                    current->next->prev = myNode;
+                }
 
-    while (current != nullptr) {
-        if (current->key == curKey) {
-            myNode->next = current->next;
-            myNode->prev = current->prev;
+                myNode->prev = current->prev;
+                myNode->next = current->next;
 
-            if (current->prev != nullptr) {
-                current->prev->next = myNode;
-            } else {
-                table[hashCode] = myNode;
+                delete current;
+                return true;
             }
-
-            if (current->next != nullptr) {
-                current->next->prev = myNode;
-            }
-
-            delete current;
-            return true;
+            current = current->next;
         }
-        current = current->next;
+
+        // Add to beginning of chain
+        myNode->next = table[hashCode];
+        myNode->prev = nullptr;
+        table[hashCode]->prev = myNode;
+        table[hashCode] = myNode;
     }
 
-    myNode->next = table[hashCode];
-    table[hashCode]->prev = myNode;
-    table[hashCode] = myNode;
     numberOfItems++;
-
     return true;
 }
 
@@ -181,6 +193,7 @@ bool HashTable::remove(int curKey) {
     return true;
 }
 
+
 /**
 *
 * clear
@@ -191,6 +204,7 @@ bool HashTable::remove(int curKey) {
 *
 * @return   nothing, but will delete all entries from the table
 */
+
 void HashTable::clear() {
     for (int i = 0; i < numberOfBuckets; i++) {
         HashNode* current = table[i];
@@ -207,6 +221,7 @@ void HashTable::clear() {
     numberOfItems = 0;
 }
 
+
 /**
 *
 * getItem
@@ -217,6 +232,7 @@ void HashTable::clear() {
 *
 * @return   pointer to the HashNode
 */
+
 HashNode* HashTable::getItem(int curKey) {
     int hashCode = calculateHashCode(curKey);
 
@@ -231,25 +247,22 @@ HashNode* HashTable::getItem(int curKey) {
     return nullptr;
 }
 
+
 /**
 *
 * contains
 *
-* Method to verify if a key is in the hash table
+* Method to check if a node with key exists in the table
 *
-* @param    curKey  check key for hash table with curKey value
+* @param    curKey  key value to find
 *
 * @return   true if found, false otherwise
 */
-bool HashTable::contains(int curKey) {
-    HashNode* result = getItem(curKey);
 
-    if (result == nullptr) {
-        return false;
-    } else {
-        return true;
-    }
+bool HashTable::contains(int curKey) {
+    return getItem(curKey) != nullptr;
 }
+
 
 /**
 *
@@ -257,62 +270,32 @@ bool HashTable::contains(int curKey) {
 *
 * Method to print out the contents of table
 *
-* @param    none
+* @param none
 *
-* @return   nothing, but output is sent to console and to file
+* @return               nothing, but output is sent to console
 */
 void HashTable::printTable() {
     std::ofstream& outFile = getOutFile();
 
-    std::cout << "\nTable contents (" << numberOfItems << " entries):\n\n";
-    outFile << "\nTable contents (" << numberOfItems << " entries):\n\n";
+    std::cout << "\nHere are the Hash Table contents (" << numberOfItems << " entries):" << std::endl;
+    outFile << "\nHere are the Hash Table contents (" << numberOfItems << " entries):" << std::endl;
 
-    int emptyStart = -1;
-    int i = 0;
-
-    while (i < numberOfBuckets) {
+    for (int i = 0; i < numberOfBuckets; i++) {
         if (table[i] == nullptr) {
-            emptyStart = i;
-
-            std::cout << "Empty: ";
-            outFile << "Empty: ";
-
-            while (i < numberOfBuckets && table[i] == nullptr) {
-                std::cout << i;
-                outFile << i;
-
-                i++;
-                if (i < numberOfBuckets && table[i] == nullptr) {
-                    std::cout << ", ";
-                    outFile << ", ";
-                }
-            }
-
-            std::cout << "\n\n";
-            outFile << "\n\n";
+            std::cout << "Bucket " << i << ": Empty" << std::endl;
+            outFile << "Bucket " << i << ": Empty" << std::endl;
         } else {
-            std::cout << "Index: " << i << ": ";
-            outFile << "Index: " << i << ": ";
+            std::cout << "Bucket " << i << ": " << std::endl;
+            outFile << "Bucket " << i << ": " << std::endl;
 
             HashNode* current = table[i];
             while (current != nullptr) {
-                std::cout << current->key;
-                outFile << current->key;
-
-                if (current->next != nullptr) {
-                    std::cout << " -> ";
-                    outFile << " -> ";
-                }
-
+                current->fifoNode->printNode();
                 current = current->next;
             }
-
-            std::cout << "\n\n";
-            outFile << "\n\n";
-            i++;
         }
     }
 
-    std::cout << "End of table\n";
-    outFile << "End of table\n";
+    std::cout << "End of table" << std::endl;
+    outFile << "End of table" << std::endl;
 }

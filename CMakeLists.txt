@@ -1,35 +1,40 @@
-# CMake minimum version. Change range if using unsupported CMake version.
-cmake_minimum_required(VERSION 3.14...3.27)
+cmake_minimum_required(VERSION 3.10)
+project(milestone3)
 
-# Project name, description, and language (C vs. CPP).
-project(milestone3
-        DESCRIPTION "milestone3"
-        LANGUAGES CXX)
-
-# Set C++ version to use.
+# Set the C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Fetch JSON parsing library from GitHub(R).
-include(FetchContent)
-FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz)
-FetchContent_MakeAvailable(json)
-
-# Declare the executable, and its name.
-add_executable(milestone3
-        hash_table.cpp)
-
-# Glob all files ending in `.cpp` and compile them together.
-file(GLOB SRC *.cpp)
-target_sources(milestone3 PRIVATE ${SRC}
+# Add source files
+set(SOURCE_FILES
+        milestone3.cpp
+        cache_manager.cpp
+        doubly_linked_list.cpp
+        hash_table.cpp
+        hash_node.cpp
+        dll_node.cpp
 )
 
-# Link external libraries (JSON library) to the executable.
-target_link_libraries(milestone3 PRIVATE
-        nlohmann_json::nlohmann_json
-)
+# Add the executable
+add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
-# Copy `.json` files into the build directory.
-add_custom_command(TARGET milestone3 PRE_BUILD
+# Include directory for headers
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
+# Copy JSON files individually to avoid wildcard issues
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_SOURCE_DIR}/*.json $<TARGET_FILE_DIR:milestone3>)
+        ${CMAKE_SOURCE_DIR}/milestone3.json
+        ${CMAKE_BINARY_DIR}/milestone3.json)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_SOURCE_DIR}/milestone3_config.json
+        ${CMAKE_BINARY_DIR}/milestone3_config.json)
+
+# Enable JSON library (if it's using a vendored JSON library)
+find_package(nlohmann_json QUIET)
+if(NOT nlohmann_json_FOUND)
+    # Include the JSON library from the project
+    include_directories(${CMAKE_SOURCE_DIR}/json)
+endif()
